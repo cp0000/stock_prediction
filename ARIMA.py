@@ -4,8 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import seaborn as sns
-plt.style.use('seaborn-darkgrid')
-sns.set_style('darkgrid')
+
+plt.style.use("seaborn-darkgrid")
+sns.set_style("darkgrid")
 
 # statistics
 from sklearn.linear_model import LinearRegression
@@ -32,7 +33,7 @@ class ARIMA(object):
 
         # Generating the lagged p terms
         for i in range(1, p + 1):
-            df_temp['Shifted_values_%d' % i] = df_temp[self.feature].shift(i)
+            df_temp["Shifted_values_%d" % i] = df_temp[self.feature].shift(i)
 
         # Split data into train/test
         df_train, df_test, train_size = self.train_test_split(df_temp)
@@ -49,18 +50,18 @@ class ARIMA(object):
 
         theta = lr.coef_.T
         intercept = lr.intercept_
-        df_train['Predicted'] = X_train.dot(lr.coef_.T) + lr.intercept_
-        df_test['Predicted'] = X_test.dot(lr.coef_.T) + lr.intercept_
+        df_train["Predicted"] = X_train.dot(lr.coef_.T) + lr.intercept_
+        df_test["Predicted"] = X_test.dot(lr.coef_.T) + lr.intercept_
 
         # Loss
-        RMSE = np.sqrt(mean_squared_error(df_test[self.feature], df_test['Predicted']))
+        RMSE = np.sqrt(mean_squared_error(df_test[self.feature], df_test["Predicted"]))
 
-        #print("The RMSE is :", RMSE, ", Value of p : ", p)
+        # print("The RMSE is :", RMSE, ", Value of p : ", p)
         return [df_train, df_test, theta, intercept, RMSE]
 
     def MovingAverage(self, q, res):
         for i in range(1, q + 1):
-            res['Shifted_values_%d' % i] = res['Residuals'].shift(i)
+            res["Shifted_values_%d" % i] = res["Residuals"].shift(i)
 
         res_train, res_test, train_size = self.train_test_split(res)
 
@@ -74,12 +75,12 @@ class ARIMA(object):
         theta = lr.coef_.T
         intercept = lr.intercept_
 
-        res_train['Predicted'] = X_train.dot(lr.coef_.T) + lr.intercept_
-        res_test['Predicted'] = X_test.dot(lr.coef_.T) + lr.intercept_
+        res_train["Predicted"] = X_train.dot(lr.coef_.T) + lr.intercept_
+        res_test["Predicted"] = X_test.dot(lr.coef_.T) + lr.intercept_
 
-        RMSE = np.sqrt(mean_squared_error(res_test['Residuals'], res_test['Predicted']))
+        RMSE = np.sqrt(mean_squared_error(res_test["Residuals"], res_test["Predicted"]))
 
-        #print("The RMSE is :", RMSE, ", Value of q : ", q)
+        # print("The RMSE is :", RMSE, ", Value of q : ", q)
         return [res_train, res_test, theta, intercept, RMSE]
 
     def run(self, df_orig: pd.DataFrame, make_stationary: bool):
@@ -93,30 +94,38 @@ class ARIMA(object):
         best_p = -1
 
         for i in range(1, 25):
-            [df_train, df_test, theta, intercept, RMSE] = self.AutoRegression(i, pd.DataFrame(df.Close))
-            if (RMSE < best_RMSE):
+            [df_train, df_test, theta, intercept, RMSE] = self.AutoRegression(
+                i, pd.DataFrame(df.Close)
+            )
+            if RMSE < best_RMSE:
                 best_RMSE = RMSE
                 best_p = i
 
         # print(best_p)
-        [df_train, df_test, theta, intercept, RMSE] = self.AutoRegression(best_p, pd.DataFrame(df.Close))
+        [df_train, df_test, theta, intercept, RMSE] = self.AutoRegression(
+            best_p, pd.DataFrame(df.Close)
+        )
 
         df_c = pd.concat([df_train, df_test])
 
         res = pd.DataFrame()
-        res['Residuals'] = df_c.Close - df_c.Predicted
+        res["Residuals"] = df_c.Close - df_c.Predicted
 
         best_RMSE = 1e5
         best_q = -1
 
         for i in range(1, 25):
-            [res_train, res_test, theta, intercept, RMSE] = self.MovingAverage(i, pd.DataFrame(res.Residuals))
-            if (RMSE < best_RMSE):
+            [res_train, res_test, theta, intercept, RMSE] = self.MovingAverage(
+                i, pd.DataFrame(res.Residuals)
+            )
+            if RMSE < best_RMSE:
                 best_RMSE = RMSE
                 best_q = i
 
         # print(best_q)
-        [res_train, res_test, theta, intercept, RMSE] = self.MovingAverage(best_q, pd.DataFrame(res.Residuals))
+        [res_train, res_test, theta, intercept, RMSE] = self.MovingAverage(
+            best_q, pd.DataFrame(res.Residuals)
+        )
         # print(theta)
         # print(intercept)
 
@@ -132,41 +141,50 @@ class ARIMA(object):
             df_c.Predicted = np.exp(df_c.Predicted)
 
         if make_stationary:
-            df_c = Analysis.inverse_stationary_data(df_orig, df_c, 'Close', 'Predicted', 12)
+            df_c = Analysis.inverse_stationary_data(
+                df_orig, df_c, "Close", "Predicted", 12
+            )
         return df_c, res
 
     def plot_results(self, df, res, stock_name: str, save_plot=True):
-        matplotlib.style.use('seaborn-darkgrid')
-        RMSE = np.sqrt(mean_squared_error(df.iloc[self.train_size:, :]["Predicted"].values, df.iloc[self.train_size:, :]["Close"].values))
-        df.iloc[self.train_size:, :][["Close", "Predicted"]].plot(figsize=(20, 8), xlabel='Date', ylabel='Price USD ($)',
-                                        title=f'Final predictions from ARIMA model for "{stock_name}" stock',
-                                        color=["#c6e2ff", "#deaddd"], linewidth=1.5)
+        matplotlib.style.use("seaborn-darkgrid")
+        RMSE = np.sqrt(
+            mean_squared_error(
+                df.iloc[self.train_size :, :]["Predicted"].values,
+                df.iloc[self.train_size :, :]["Close"].values,
+            )
+        )
+        df.iloc[self.train_size :, :][["Close", "Predicted"]].plot(
+            figsize=(20, 8),
+            xlabel="Date",
+            ylabel="Price USD ($)",
+            title=f'Final predictions from ARIMA model for "{stock_name}" stock',
+            color=["#c6e2ff", "#deaddd"],
+            linewidth=1.5,
+        )
         if save_plot:
-            plt.savefig('./demonstration_images/arima_predictions.png')
+            plt.savefig("./demonstration_images/arima_predictions.png")
         plt.show()
 
         plt.figure(figsize=(12, 8))
         sns.kdeplot(res["Residuals"], color="#c7c6ff", shade=True, linewidth=2)
-        plt.title(f'Density of the residuals from the auto-regression for "{stock_name}" stock')
-        plt.xlabel('Residuals')
-        plt.ylabel('Density')
+        plt.title(
+            f'Density of the residuals from the auto-regression for "{stock_name}" stock'
+        )
+        plt.xlabel("Residuals")
+        plt.ylabel("Density")
         if save_plot:
-            #fig_r = ax_r.get_figure()
-            plt.savefig('./demonstration_images/arima_residuals.png')
+            # fig_r = ax_r.get_figure()
+            plt.savefig("./demonstration_images/arima_residuals.png")
         plt.show()
 
 
-if __name__=='__main__':
-    df = Analysis.get_data('./Data/AMZN.csv')
+if __name__ == "__main__":
+    df = Analysis.get_data("./Data/AMZN.csv")
     df = df[["Close"]]
-    df.rename(columns={0: 'Close'}, inplace=True)
+    df.rename(columns={0: "Close"}, inplace=True)
 
-    arima_model = ARIMA(0.8, 'Close')
+    arima_model = ARIMA(0.8, "Close")
     df_c, res = arima_model.run(df, True)
 
-    arima_model.plot_results(df_c, res, 'AMZN', save_plot=True)
-
-
-
-
-
+    arima_model.plot_results(df_c, res, "AMZN", save_plot=True)
